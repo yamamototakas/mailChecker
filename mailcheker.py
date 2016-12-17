@@ -96,6 +96,24 @@ def extract_url(msg, fromkey, payloadkey, multiurl):
     else:
         return None
 
+def isEmailTocheck(msg, fromkey):
+
+    f_header = msg.get('From',str)
+
+    # rakuten mail is not correctly decoded
+    # the following replacement is useful
+    if isinstance(f_header, str):
+        f_header_mod = f_header.replace('==?=<','==?= <')
+    else:
+        f_header_mod = f_header#.encode()
+
+    decoded_from=decode_mime_header(f_header_mod)
+
+    if fromkey in decoded_from:
+        return True
+    else:
+        return False
+
 
 class http_get(threading.Thread):
     def __init__(self, url, opener, index):
@@ -240,21 +258,39 @@ if __name__ == '__main__':
         for i in range(index, len(list_items)+1):
 
             try:
-                resp, text, octets = server.retr(i)
+                #resp, text, octets = server.retr(i)
+                t_resp, t_text, t_octets = server.top(i,1)
             except:
-                print('Unexpected error in server.retr of Main function\n')
+                print('Unexpected error in server.top of Main function\n')
                 print('i=', i, ', index=', index)
 
 
             #print (text)'
-            string_text = b'\n'.join(text)
-            msg = email.message_from_bytes(string_text)
+            t_string_text = b'\n'.join(t_text)
+            t_msg = email.message_from_bytes(t_string_text)
+
+            url_list = None
+            checkBody = False
 
             for from_key, text_key, multiurl in dl_list[j]:
-                url_list = extract_url(msg, from_key, text_key, multiurl)
-                if url_list:
+                if isEmailTocheck(t_msg, from_key):
+                    checkBody = True
                     break
 
+            if checkBody:
+                try:
+                    resp, text, octets = server.retr(i)
+                except:
+                    print('Unexpected error in server.retr of Main function\n')
+                    print('i=', i, ', index=', index)
+
+                string_text = b'\n'.join(text)
+                msg = email.message_from_bytes(string_text)
+                for from_key, text_key, multiurl in dl_list[j]:
+                    url_list = extract_url(msg, from_key, text_key, multiurl)
+                    if url_list:
+                        break
+                        
             #print url_list
             if url_list:
                 m_date = msg.get('Date')
