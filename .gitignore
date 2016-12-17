@@ -89,5 +89,5 @@ ENV/
 .ropeproject
 
 # Mail ID checked already
-.dat
+*.dat
 mailcheker_data.py
